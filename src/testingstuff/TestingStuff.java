@@ -16,7 +16,7 @@ import testingstuff.data.DfaFactory;
 
 public class TestingStuff {
 
-    private static final int NUMBER_OF_TESTS = 1;
+    private static final int NUMBER_OF_TESTS = 10;
     
     private static final long DEFAULT_SEED = 234;
     
@@ -38,7 +38,7 @@ public class TestingStuff {
         System.out.println("Running");
         for (int i=0; i<NUMBER_OF_TESTS; i++) {
             
-            /*tPar.run(dfas[i]);
+            tPar.run(dfas[i]);
                         
             HashMap<DfaState, Integer> result = tSeq.run(dfas[i]);
             System.out.println("\nSeq Result:");
@@ -46,16 +46,20 @@ public class TestingStuff {
             
             Set<Set<DfaState>> hcResult = hcSeq.run(dfas[i]);
             System.out.println("\nHopcroft Result:");
-            System.out.println(hcResult);*/
+            System.out.println(hcResult);
             
-            Dfa dfa = factory.specialDfa2();
-            tPar.run(dfa);
+            /*Dfa dfa = factory.specialDfa2();
+            HashMap<DfaState, Integer> parResult = tPar.run(dfa);
+            
+            System.out.println("Parallel Result:");
+            System.out.println(parResult);
+            System.out.println();
             
             HashMap<DfaState, Integer> result = tSeq.run(dfa);
             System.out.println("Sequential Result:");
             System.out.println(result);
                         
-            System.exit(0);
+            System.exit(0);*/
         }
         long end = System.nanoTime();
         long time = (end - start) / 1000000;

@@ -26,6 +26,7 @@ public class Dfa {
 
     public void setStates(Set<DfaState> states) {
         this.states = states;
+        statesAsList.clear();
         for (DfaState state : states) {
             statesAsList.add(state);
         }
