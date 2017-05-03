@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import testingstuff.data.Dfa;
 import testingstuff.data.DfaState;
@@ -12,127 +13,258 @@ import testingstuff.data.Edge;
 
 public class TewariParallel {   
     
-    public HashMap<DfaState, Integer> run(Dfa dfa) {
-        HashMap<DfaState, Integer> blockNo = new HashMap();               
+    private static final boolean PRINT_DEBUG = false;
+    
+    public HashMap<DfaState, Integer> run(final Dfa dfa) {
+        final HashMap<DfaState, Integer> blockNo = new HashMap();               
         
         for (DfaState finalState : dfa.getFinalStates()) {           
             blockNo.put(finalState, 1);
         }
         for (DfaState nonFinalState : dfa.getNonFinalStates()) {
             blockNo.put(nonFinalState, 2);
-        }
+        }   
         
-        double n = (double)dfa.states.size();
-        double logN = Math.log(n) / Math.log(2);
-        double doubleResult =  n / logN;
-        int nLogN = (int)(Math.ceil(doubleResult));
+        // Some much used calculations.
+        final double n = (double)dfa.states.size();
+        final double logN = Math.log(n) / Math.log(2);
+        final double doubleResult =  n / logN;
+        final int nLogN = (int)(Math.ceil(doubleResult));
+        
+        Thread[] threads = new Thread[nLogN];
         
         int numberOfBlocks = 2;
         do {
             for (int i = 0; i < dfa.alphabetSize; i++) {
+                final int finalI = i;
+                final HashMap<DfaState, Integer>[] threadLabels = new HashMap[nLogN+1];
                 
-                HashMap<DfaState, Integer>[] threadLabels = new HashMap[nLogN+1];
-                
-                AtomicInteger maxBValue = new AtomicInteger(0);
+                final AtomicInteger maxBValue = new AtomicInteger(0);
                 for (int j = 1; j <= nLogN; j++) {
-                    threadLabels[j] = new HashMap();
+                    final int jFinal = j;
+                    threadLabels[jFinal] = new HashMap();
                     
-                    for (int m=(int)(Math.ceil((j-1)*logN)); m<=(int)(Math.ceil(j*logN-1)); m++) {
-                        if (m >= dfa.states.size()) { continue; }
-                        DfaState state = dfa.statesAsList.get(m);
-                        
-                        Integer b1 = blockNo.get(state);
-                        while(true) {
-                            int oldValue = maxBValue.get();
-                            if (b1 > oldValue) {
-                                if (maxBValue.compareAndSet(oldValue, b1)) {
-                                    break;
+                    threads[j-1] = new Thread() {
+                        @Override
+                        public void run() {
+                            for (int m = (int) (Math.ceil((jFinal - 1) * logN)); m <= (int) (Math.ceil(jFinal * logN - 1)); m++) {
+                                if (m >= dfa.states.size()) {
+                                    continue;
                                 }
-                            } else {
-                                break;
-                            }
-                        }
-                        
-                        DfaState b2State = getB2State(state, i);
-                        Integer b2 = blockNo.get(b2State);
-                        while(true) {
-                            int oldValue = maxBValue.get();
-                            if (b2 > oldValue) {
-                                if (maxBValue.compareAndSet(oldValue, b2)) {
-                                    break;
-                                }
-                            } else {
-                                break;
-                            }
-                        }
+                                DfaState state = dfa.statesAsList.get(m);
 
-                        int labelNumber = b1 * ((int)n + 1) + b2;     
-                        threadLabels[j].put(state, labelNumber);
-                    }                    
-                }
-                
-                int k = (int)Math.ceil(((double)maxBValue.get() * (n + 1.0) + (double)maxBValue.get()) / n);
-                
-                HashMap<Integer, Boolean> PRESENT = new HashMap();
-                
-                for (int j=1; j<=nLogN; j++) {
-                    for (int m=(int)(Math.ceil((j-1)*logN)); m<=(int)(Math.ceil(j*logN-1)); m++) {
-                        if (m >= dfa.states.size()) { continue; }
-                        
-                        Integer label = threadLabels[j].get(dfa.statesAsList.get(m));                        
-                        PRESENT.put(label, true);
-                    }
-                }
-                
-                int ai[] = new int[nLogN+1];
-                for (int j=1; j<=nLogN; j++) {
-                    ai[j] = 0;
-                    for (int m=(int)((j-1)*(k*logN)+1); m<=(int)(j*k*logN); m++) {
-                        if (m > k*n) { continue; }
-                        
-                        Boolean isPresent = PRESENT.get(m);
-                        if (isPresent != null) {
-                            ai[j] += 1;
+                                Integer b1 = blockNo.get(state);
+                                while (true) {
+                                    int oldValue = maxBValue.get();
+                                    if (b1 > oldValue) {
+                                        if (maxBValue.compareAndSet(oldValue, b1)) {
+                                            break;
+                                        }
+                                    } else {
+                                        break;
+                                    }
+                                }
+
+                                DfaState b2State = getB2State(state, finalI);
+                                Integer b2 = blockNo.get(b2State);
+                                while (true) {
+                                    int oldValue = maxBValue.get();
+                                    if (b2 > oldValue) {
+                                        if (maxBValue.compareAndSet(oldValue, b2)) {
+                                            break;
+                                        }
+                                    } else {
+                                        break;
+                                    }
+                                }
+
+                                int labelNumber = b1 * ((int) n + 1) + b2;
+                                threadLabels[jFinal].put(state, labelNumber);
+
+                            }
                         }
+                    };
+                    threads[j-1].start();
+                }
+                
+                waitForThreads(threads);
+                
+                if (PRINT_DEBUG) {
+                    System.out.println("After first join:");
+                    for (int j=1; j<threads.length; j++) {
+                        System.out.println("(" + j + ") " + threadLabels[j]);
                     }
+                    System.out.println();
+                }
+                
+                final int k = (int)Math.ceil(((double)maxBValue.get() * (n + 1.0) + (double)maxBValue.get()) / n);
+                
+                final ConcurrentHashMap<Integer, Boolean> PRESENT = new ConcurrentHashMap();
+                
+                for (int j = 1; j <= nLogN; j++) {
+                    final int finalJ = j;
+                    threads[j - 1] = new Thread() {
+                        @Override
+                        public void run() {
+
+                            for (int m = (int) (Math.ceil((finalJ - 1) * logN)); m <= (int) (Math.ceil(finalJ * logN - 1)); m++) {
+                                if (m >= dfa.states.size()) {
+                                    continue;
+                                }
+
+                                Integer label = threadLabels[finalJ].get(dfa.statesAsList.get(m));
+                                PRESENT.put(label, true);
+                            }
+                        }
+                    };
+                    threads[j-1].start();
+                }
+                
+                waitForThreads(threads);
+                
+                if (PRINT_DEBUG) {
+                    System.out.println("After PRESENT: ");
+                    System.out.println(PRESENT);
+                    System.out.println();
+                }
+                
+                final int ai[] = new int[nLogN+1];
+                for (int j=1; j<=nLogN; j++) {
+                    final int finalJ = j;
+                    threads[j-1] = new Thread() {
+                        @Override
+                        public void run() {        
+                            ai[finalJ] = 0;
+                            for (int m = (int) ((finalJ - 1) * (k * logN) + 1); m <= (int) (finalJ * k * logN); m++) {
+                                if (m > k * n) {
+                                    continue;
+                                }
+
+                                Boolean isPresent = PRESENT.get(m);
+                                if (isPresent != null) {
+                                    ai[finalJ] += 1;
+                                }
+                            }
+                        }
+                    };
+                    threads[j-1].start();
+                }
+                
+                waitForThreads(threads);
+                
+                if (PRINT_DEBUG) {
+                    System.out.println("After ai: ");
+                    for (int j=1; j<threads.length; j++) {
+                        System.out.println("(" + j + ") " + ai[j]);
+                    }                
+                    System.out.println();
                 }
                 
                 // Compute partial sums..
-                int[] si = new int[nLogN+1];
-                for (int j=1; j<=nLogN; j++) {
-                    si[j] = 0;
-                    for (int m=0; m<j; m++) {
-                        si[j] += ai[m];
-                    } 
+                final int[] si = new int[nLogN + 1];
+                for (int j = 1; j <= nLogN; j++) {
+                    final int finalJ = j;
+                    threads[j - 1] = new Thread() {
+                        @Override
+                        public void run() {
+                            si[finalJ] = 0;
+                            for (int m = 0; m < finalJ; m++) {
+                                si[finalJ] += ai[m];
+                            }
+                        }
+                    };
+                    threads[j - 1].start();
+                }
+                
+                waitForThreads(threads);
+                
+                
+                if (PRINT_DEBUG) {
+                    System.out.println("After si: ");
+                    for (int j=1; j<threads.length; j++) {
+                        System.out.println("(" + j + ") " + si[j]);
+                    }                
+                    System.out.println();
                 }
                 
                 // Compute new block numbers
-                HashMap<Integer, Integer> newBlockNo = new HashMap();
+                final ConcurrentHashMap<Integer, Integer> newBlockNo = new ConcurrentHashMap();
                 
-                for (int j=1; j<=nLogN; j++) {
-                    int initialValue = si[j];
-                    for (int m=(int)((j-1)*(k*logN)+1); m<=(int)(j*k*logN); m++) {
-                        if (m > k*n) { continue; }
-                        
-                        Boolean isPresent = PRESENT.get(m);
-                        if (isPresent != null) {
-                            initialValue++;
-                            newBlockNo.put(m, initialValue);
+                for (int j = 1; j <= nLogN; j++) {
+                    final int finalJ = j;
+                    threads[j - 1] = new Thread() {
+                        @Override
+                        public void run() {
+
+                            int initialValue = si[finalJ];
+                            for (int m = (int) ((finalJ - 1) * (k * logN) + 1); m <= (int) (finalJ * k * logN); m++) {
+                                if (m > k * n) {
+                                    continue;
+                                }
+
+                                Boolean isPresent = PRESENT.get(m);
+                                if (isPresent != null) {
+                                    initialValue++;
+                                    newBlockNo.put(m, initialValue);
+                                }
+
+                            }
                         }
-                        
-                    }
+                    };
+                    threads[j-1].start();
+                }
+                
+                waitForThreads(threads);
+                if (PRINT_DEBUG) {
+                    System.out.println("After newBlockNo: ");
+                    System.out.println(newBlockNo);         
+                    System.out.println();
                 }
                                 
                 // Update the blockNo according to newBlockNo.
                 for (int j=1; j<=nLogN; j++) {
-                    for (int m=(int)(Math.ceil((j-1)*logN)); m<=(int)(Math.ceil(j*logN-1)); m++) {
-                        if (m >= dfa.states.size()) { continue; }
-                        
-                        DfaState state = dfa.statesAsList.get(m);
-                        Integer label = threadLabels[j].get(state);
-                        int newBlockNumber = newBlockNo.get(label);
-                        blockNo.put(state, newBlockNumber);
-                    }
+                    final int finalJ = j;
+                    threads[j-1] = new Thread() {
+                        @Override
+                        public void run() {
+                            for (int m=(int)(Math.ceil((finalJ-1)*logN)); m<=(int)(Math.ceil(finalJ*logN-1)); m++) {
+                                if (m >= dfa.states.size()) { continue; }
+
+                                DfaState state = dfa.statesAsList.get(m);
+                                Integer label = threadLabels[finalJ].get(state);
+                                int newBlockNumber = -1;
+                                try {
+                                    newBlockNumber = newBlockNo.get(label);
+                                } catch(NullPointerException ex) {
+                                    System.out.println("newBlockNo DataStruct:");
+                                    System.out.println(newBlockNo);
+                                    System.out.println();
+                                    System.out.println(newBlockNumber);
+                                    
+                                    System.out.println("Label: " + label);
+                                    for (int j=1; j<=nLogN; j++) {
+                                        System.out.println("Thread Labels (" + j + ") " + threadLabels[j]);
+                                    }
+                                    System.out.println("maxBValue:" + maxBValue);
+                                   
+                                    
+                                    System.out.println("I CAUGHT IT!");
+                                    System.exit(0);
+                                }
+                                blockNo.put(state, newBlockNumber);
+                            }
+                        }
+                    };
+                    threads[j-1].start();
+                }
+                
+                // Wait for all threads.
+                waitForThreads(threads);
+                
+                if (PRINT_DEBUG) {
+                    System.out.println("After final thingy");
+                    System.out.println(blockNo);
+                    System.out.println();
                 }
             }
             
@@ -144,6 +276,16 @@ public class TewariParallel {
         } while(true);
         
         return blockNo;
+    }
+    
+    private void waitForThreads(Thread[] threads) {
+        for (int i=0; i<threads.length; i++) {
+            try {
+                threads[i].join();
+            } catch(InterruptedException ex) {
+                ex.printStackTrace();
+            }
+        }
     }
     
     private int countNumberOfBlocks(HashMap<DfaState, Integer> blockNo) {        

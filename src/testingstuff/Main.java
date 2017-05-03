@@ -14,18 +14,18 @@ import testingstuff.algorithms.tewariparallel.TewariParallel;
 import testingstuff.data.Dfa;
 import testingstuff.data.DfaFactory;
 
-public class TestingStuff {
+public class Main {
 
     private static final int NUMBER_OF_TESTS = 10;
     
     private static final long DEFAULT_SEED = 234;
     
-    public TestingStuff() {
+    public Main() {
         DfaFactory factory = new DfaFactory(DEFAULT_SEED);
 
         Dfa dfas[] = new Dfa[NUMBER_OF_TESTS];            
         for (int i=0; i<NUMBER_OF_TESTS; i++) {
-        Dfa dfa = factory.randomDfa(10, 4);
+        Dfa dfa = factory.randomDfa(100, 4);
             dfas[i] = dfa;
         }
         
@@ -38,15 +38,15 @@ public class TestingStuff {
         System.out.println("Running");
         for (int i=0; i<NUMBER_OF_TESTS; i++) {
             
-            tPar.run(dfas[i]);
+            HashMap<DfaState, Integer> resultPar = tPar.run(dfas[i]);
+            System.out.println("\nPar Result:\n" + resultPar);
+                    
                         
-            HashMap<DfaState, Integer> result = tSeq.run(dfas[i]);
-            System.out.println("\nSeq Result:");
-            System.out.println(result);
+            Set<Set<DfaState>> result = hcSeq.run(dfas[i]);
+            System.out.println("\nSeq Result:\n" + result);
             
-            Set<Set<DfaState>> hcResult = hcSeq.run(dfas[i]);
-            System.out.println("\nHopcroft Result:");
-            System.out.println(hcResult);
+            System.out.println("isEqual: " + compare(resultPar, result));
+            
             
             /*Dfa dfa = factory.specialDfa2();
             HashMap<DfaState, Integer> parResult = tPar.run(dfa);
@@ -67,8 +67,9 @@ public class TestingStuff {
     }
     
     public static void main(String[] args) {
-        new TestingStuff();
+        new Main();
     }
+    
     
     public boolean compare(HashMap<DfaState, Integer> result1, Set<Set<DfaState>> result2) {
         for (Set<DfaState> stateSet : result2) {            
