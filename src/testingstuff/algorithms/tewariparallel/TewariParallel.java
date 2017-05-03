@@ -13,7 +13,6 @@ import testingstuff.data.Edge;
 
 public class TewariParallel {   
     
-    private static final boolean PRINT_DEBUG = false;
     
     public HashMap<DfaState, Integer> run(final Dfa dfa) {
         final HashMap<DfaState, Integer> blockNo = new HashMap();               
@@ -30,7 +29,9 @@ public class TewariParallel {
         final double logN = Math.log(n) / Math.log(2);
         final double doubleResult =  n / logN;
         final int nLogN = (int)(Math.ceil(doubleResult));
-        
+        if (dfa.states.size() == 1) {
+            return blockNo;
+        }
         Thread[] threads = new Thread[nLogN];
         
         int numberOfBlocks = 2;
@@ -88,15 +89,7 @@ public class TewariParallel {
                 }
                 
                 waitForThreads(threads);
-                
-                if (PRINT_DEBUG) {
-                    System.out.println("After first join:");
-                    for (int j=1; j<threads.length; j++) {
-                        System.out.println("(" + j + ") " + threadLabels[j]);
-                    }
-                    System.out.println();
-                }
-                
+                               
                 final int k = (int)Math.ceil(((double)maxBValue.get() * (n + 1.0) + (double)maxBValue.get()) / n);
                 
                 final ConcurrentHashMap<Integer, Boolean> PRESENT = new ConcurrentHashMap();
@@ -121,13 +114,7 @@ public class TewariParallel {
                 }
                 
                 waitForThreads(threads);
-                
-                if (PRINT_DEBUG) {
-                    System.out.println("After PRESENT: ");
-                    System.out.println(PRESENT);
-                    System.out.println();
-                }
-                
+                                
                 final int ai[] = new int[nLogN+1];
                 for (int j=1; j<=nLogN; j++) {
                     final int finalJ = j;
@@ -151,15 +138,7 @@ public class TewariParallel {
                 }
                 
                 waitForThreads(threads);
-                
-                if (PRINT_DEBUG) {
-                    System.out.println("After ai: ");
-                    for (int j=1; j<threads.length; j++) {
-                        System.out.println("(" + j + ") " + ai[j]);
-                    }                
-                    System.out.println();
-                }
-                
+                               
                 // Compute partial sums..
                 final int[] si = new int[nLogN + 1];
                 for (int j = 1; j <= nLogN; j++) {
@@ -177,16 +156,7 @@ public class TewariParallel {
                 }
                 
                 waitForThreads(threads);
-                
-                
-                if (PRINT_DEBUG) {
-                    System.out.println("After si: ");
-                    for (int j=1; j<threads.length; j++) {
-                        System.out.println("(" + j + ") " + si[j]);
-                    }                
-                    System.out.println();
-                }
-                
+                                
                 // Compute new block numbers
                 final ConcurrentHashMap<Integer, Integer> newBlockNo = new ConcurrentHashMap();
                 
@@ -215,11 +185,6 @@ public class TewariParallel {
                 }
                 
                 waitForThreads(threads);
-                if (PRINT_DEBUG) {
-                    System.out.println("After newBlockNo: ");
-                    System.out.println(newBlockNo);         
-                    System.out.println();
-                }
                                 
                 // Update the blockNo according to newBlockNo.
                 for (int j=1; j<=nLogN; j++) {
@@ -233,24 +198,8 @@ public class TewariParallel {
                                 DfaState state = dfa.statesAsList.get(m);
                                 Integer label = threadLabels[finalJ].get(state);
                                 int newBlockNumber = -1;
-                                try {
-                                    newBlockNumber = newBlockNo.get(label);
-                                } catch(NullPointerException ex) {
-                                    System.out.println("newBlockNo DataStruct:");
-                                    System.out.println(newBlockNo);
-                                    System.out.println();
-                                    System.out.println(newBlockNumber);
-                                    
-                                    System.out.println("Label: " + label);
-                                    for (int j=1; j<=nLogN; j++) {
-                                        System.out.println("Thread Labels (" + j + ") " + threadLabels[j]);
-                                    }
-                                    System.out.println("maxBValue:" + maxBValue);
-                                   
-                                    
-                                    System.out.println("I CAUGHT IT!");
-                                    System.exit(0);
-                                }
+                                newBlockNumber = newBlockNo.get(label);
+                                
                                 blockNo.put(state, newBlockNumber);
                             }
                         }
@@ -261,11 +210,6 @@ public class TewariParallel {
                 // Wait for all threads.
                 waitForThreads(threads);
                 
-                if (PRINT_DEBUG) {
-                    System.out.println("After final thingy");
-                    System.out.println(blockNo);
-                    System.out.println();
-                }
             }
             
             int newNumberOfBlocks = countNumberOfBlocks(blockNo);
