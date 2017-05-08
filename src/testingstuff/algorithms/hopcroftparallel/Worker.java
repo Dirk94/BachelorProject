@@ -6,45 +6,49 @@ import testingstuff.data.DfaState;
 
 public class Worker extends Thread {
     
-    public Set<DfaState>
-            y,
-            x,
-            toRemoveFromP = null,
-            toRemoveFromW = null;
+    public boolean somethingChanged;
     
-    public Set<Set<DfaState>>
-            w,
-            toAddToP = new HashSet(),
-            toAddToW = new HashSet();
+    public Set<DfaState> x, y;
     
-    public Worker(Set<DfaState> y, Set<DfaState> x, Set<Set<DfaState>> w) {
+    public Set<Set<DfaState>> w, toRemove, toAdd, toRemoveW, toAddW;
+    
+    public Worker(Set<DfaState> x, Set<DfaState> y, Set<Set<DfaState>> w) {
+        // Local copies of the data.
         this.x = x;
         this.y = y;
         this.w = w;
+        
+        toRemove = new HashSet();
+        toAdd = new HashSet();                
+        toRemoveW = new HashSet();
+        toAddW = new HashSet();
+        
+        somethingChanged = false;
     }
     
     @Override
-    public void run() {
+    public void run() {        
         Set<DfaState> intersection = new HashSet(y);
         intersection.retainAll(x);
 
         Set<DfaState> difference = new HashSet(y);
         difference.removeAll(x);
-        
+
         if (!intersection.isEmpty() && !difference.isEmpty()) {
-            toRemoveFromP = y;
-            toAddToP.add(intersection);
-            toAddToP.add(difference);
-            
+            somethingChanged = true;
+            toRemove.add(y);
+            toAdd.add(intersection);
+            toAdd.add(difference);
+
             if (w.contains(y)) {
-                toRemoveFromW = y;
-                toAddToW.add(intersection);
-                toAddToW.add(difference);                
+                toRemoveW.add(y);
+                toAddW.add(intersection);
+                toAddW.add(difference);
             } else {
                 if (intersection.size() <= difference.size()) {
-                    toAddToW.add(intersection);
+                    toAddW.add(intersection);
                 } else {
-                    toAddToW.add(difference);
+                    toAddW.add(difference);
                 }
             }
         }

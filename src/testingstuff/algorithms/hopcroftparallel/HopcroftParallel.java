@@ -1,8 +1,15 @@
 package testingstuff.algorithms.hopcroftparallel;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import testingstuff.data.Dfa;
 import testingstuff.data.DfaState;
 import testingstuff.data.Edge;
@@ -10,8 +17,6 @@ import testingstuff.data.Edge;
 public class HopcroftParallel {
     
     public Set<Set<DfaState>> run(Dfa dfa) {
-        Set<Set<DfaState>> wHasContained = new HashSet();
-        
         Set<Set<DfaState>> p = new HashSet();
         Set<Set<DfaState>> w = new HashSet();
         
@@ -26,49 +31,42 @@ public class HopcroftParallel {
             wIt.remove();
             
             for (int i=0; i<dfa.alphabetSize; i++) {
-                Set<DfaState> x = getX(dfa, a, i);
+                Set<DfaState> x = getX(a, i);
+                if (x.isEmpty()) { continue; }
                 
-                // Start a thread for each element in p.
-                int nThreads = p.size();
-                Worker[] workers = new Worker[nThreads];
-                int index = 0;
-                for (Set<DfaState> states : p) {
-                    workers[index] = new Worker(states, x, w);
-                    workers[index].start();
-                    index++;
+                List<Thread> threads = new ArrayList();
+                for (Set<DfaState> y : p) {
+                    if (y.size() == 1) { continue; }
+                    
+                    Worker worker = new Worker(x, y, w);
+                    worker.start();
+                    threads.add(worker);
                 }
                 
-                // Wait for all threads to finish.
-                for (int j=0; j<nThreads; j++) {
+                for (Thread worker : threads) {
                     try {
-                        workers[j].join();
+                        worker.join();
                     } catch(InterruptedException ex) {
                         ex.printStackTrace();
                     }
                 }
                 
-                // Update the data according to the Thread results.
-                Set<Set<DfaState>> before = p;
-                for (int j=0; j<nThreads; j++) {
+                for (Thread thread : threads) {
+                    Worker worker = (Worker) thread;                    
+                    if (!worker.somethingChanged) { continue; }
                     
-                    if (workers[j].toRemoveFromP != null) {
-                        p.remove(workers[j].toRemoveFromP);
+                    for (Set<DfaState> state : worker.toRemove) {
+                        p.remove(state);
                     }
-                    if (workers[j].toRemoveFromW != null) {
-                        w.remove(workers[j].toRemoveFromW);
+                    for (Set<DfaState> state : worker.toAdd) {
+                        p.add(state);
                     }
-                    
-                    for (Set<DfaState> s : workers[j].toAddToP) {
-                        if (!p.contains(s)) {
-                            p.add(s);
-                        }
+                    for (Set<DfaState> state : worker.toRemoveW) {
+                        w.remove(state);
                     }
-                    for (Set<DfaState> s : workers[j].toAddToW) {
-                        if (!w.contains(s) && !wHasContained.contains(s)) {
-                            w.add(s);
-                            wHasContained.add(s);
-                        }
-                    }                    
+                    for (Set<DfaState> state : worker.toAddW) {
+                        w.add(state);
+                    }
                 }
             }
         }
@@ -76,19 +74,18 @@ public class HopcroftParallel {
         return p;
     }
     
-    private Set<DfaState> getX(Dfa dfa, Set<DfaState> a, int i) {
+    private Set<DfaState> getX(Set<DfaState> a, int i) {
         Set<DfaState> x = new HashSet();
         
-        for (DfaState state : dfa.states) {
-            for (Edge edge : state.edges) {
-                if (edge.label == i && a.contains(edge.stateTo)) {
-                    if (!x.contains(edge.stateFrom)) {
-                        x.add(edge.stateFrom);
-                    }
+        for (DfaState state : a) {
+            for (Edge edge : state.incomingEdges) {
+                if (edge.label == i) {
+                    x.add(edge.stateFrom);
                 }
             }
         }
 
         return x;
     }
+    
 }

@@ -16,12 +16,12 @@ import testingstuff.data.DfaFactory;
 
 public class Main {
 
-    private static final int NUMBER_OF_TESTS = 10;
+    private static final int NUMBER_OF_TESTS = 1;
     
-    private static final long DEFAULT_SEED = 234;
+    private static final long DEFAULT_SEED = 65465;
     
     public Main(String algorithm, int states, int alphabetSize) {
-        DfaFactory factory = new DfaFactory(DEFAULT_SEED);
+        DfaFactory factory = new DfaFactory();
 
         Dfa dfas[] = new Dfa[NUMBER_OF_TESTS];            
         for (int i=0; i<NUMBER_OF_TESTS; i++) {
@@ -33,6 +33,13 @@ public class Main {
         HopcroftParallel hcPar = new HopcroftParallel();
         TewariSequential tSeq = new TewariSequential();
         TewariParallel tPar = new TewariParallel();
+       
+        Set<Set<DfaState>> result = hcPar.run(dfas[0]);
+        HashMap<DfaState, Integer> result2 = tSeq.run(dfas[0]);
+        boolean equal = compare(result2, result);
+        System.out.println("Equal: " + equal);
+        System.exit(0);
+        
         
         long start = System.nanoTime();
         System.out.println("Running");

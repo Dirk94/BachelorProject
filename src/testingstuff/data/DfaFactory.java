@@ -9,11 +9,14 @@ public class DfaFactory {
     
     public Random random;
     
+    public DfaFactory() {
+        random = new Random();
+    }
+    
     public DfaFactory(long seed) {
         random = new Random(seed);
     }
     
-    /** @deprecated */
     public Dfa specialDfa2() {
         Set<DfaState> states = new HashSet();
         DfaState state3 = new DfaState(3);
@@ -32,26 +35,54 @@ public class DfaFactory {
         states.add(state6);
         states.add(state5);
         
-        state3.edges.add(new Edge(state3, state5, 1));
-        state3.edges.add(new Edge(state3, state6, 0));
+        Edge e1 = new Edge(state3, state5, 1);
+        Edge e2 = new Edge(state3, state6, 0);
+        state3.edges.add(e1);
+        state3.edges.add(e2);
+        state5.incomingEdges.add(e1);
+        state6.incomingEdges.add(e2);
         
-        state1.edges.add(new Edge(state1, state6, 0));
-        state1.edges.add(new Edge(state1, state1, 1));
+        Edge e3 = new Edge(state1, state6, 0);
+        Edge e4 = new Edge(state1, state1, 1);
+        state1.edges.add(e3);
+        state1.edges.add(e4);
+        state6.incomingEdges.add(e3);
+        state1.incomingEdges.add(e4);
         
-        state0.edges.add(new Edge(state0, state9, 1));
-        state0.edges.add(new Edge(state0, state3, 0));
+        Edge e5 = new Edge(state0, state9, 1);
+        Edge e6 = new Edge(state0, state3, 0);
+        state9.incomingEdges.add(e5);
+        state3.incomingEdges.add(e6);
+        state0.edges.add(e5);
+        state0.edges.add(e6);
         
-        state9.edges.add(new Edge(state9, state5, 0));
-        state9.edges.add(new Edge(state9, state9, 1));
+        Edge e7 = new Edge(state9, state5, 0);
+        Edge e8 = new Edge(state9, state9, 1);
+        state5.incomingEdges.add(e7);
+        state9.incomingEdges.add(e8);
+        state9.edges.add(e7);
+        state9.edges.add(e8);
         
+        Edge e9 = new Edge(state8, state6, 1);
+        Edge e10 = new Edge(state8, state1, 0);
+        state6.incomingEdges.add(e9);
+        state1.incomingEdges.add(e10);
         state8.edges.add(new Edge(state8, state6, 1));
         state8.edges.add(new Edge(state8, state1, 0));
         
-        state6.edges.add(new Edge(state6, state9, 1));
-        state6.edges.add(new Edge(state6, state0, 0));
+        Edge e11 = new Edge(state6, state9, 1);
+        Edge e12 = new Edge(state6, state0, 0);
+        state9.incomingEdges.add(e11);
+        state0.incomingEdges.add(e12);
+        state6.edges.add(e11);
+        state6.edges.add(e12);
         
-        state5.edges.add(new Edge(state5, state0, 0));
-        state5.edges.add(new Edge(state5, state3, 1));
+        Edge e13 = new Edge(state5, state0, 0);
+        Edge e14 = new Edge(state5, state3, 1);
+        state0.incomingEdges.add(e13);
+        state3.incomingEdges.add(e14);
+        state5.edges.add(e13);
+        state5.edges.add(e14);
         
         state1.finalState = true;
         state8.finalState = true;
