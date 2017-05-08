@@ -1,54 +1,56 @@
 package testingstuff.algorithms.hopcroftparallel;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import testingstuff.data.DfaState;
 
 public class Worker extends Thread {
-    
-    public boolean somethingChanged;
-    
-    public Set<DfaState> x, y;
+
+    public int start, end;
+
+    public Set<DfaState> x;
     
     public Set<Set<DfaState>> w, toRemove, toAdd, toRemoveW, toAddW;
-    
-    public Worker(Set<DfaState> x, Set<DfaState> y, Set<Set<DfaState>> w) {
-        // Local copies of the data.
-        this.x = x;
-        this.y = y;
-        this.w = w;
-        
+
+    public List<Set<DfaState>> p;
+
+    public Worker() {
         toRemove = new HashSet();
         toAdd = new HashSet();                
         toRemoveW = new HashSet();
         toAddW = new HashSet();
-        
-        somethingChanged = false;
     }
     
     @Override
-    public void run() {        
-        Set<DfaState> intersection = new HashSet(y);
-        intersection.retainAll(x);
+    public void run() {
+        for (int i=start; i<end; i++) {
+            if (i >= p.size()) { continue; }
 
-        Set<DfaState> difference = new HashSet(y);
-        difference.removeAll(x);
+            Set<DfaState> y = p.get(i);
+            if (y.size() == 1) { continue; }
 
-        if (!intersection.isEmpty() && !difference.isEmpty()) {
-            somethingChanged = true;
-            toRemove.add(y);
-            toAdd.add(intersection);
-            toAdd.add(difference);
+            Set<DfaState> intersection = new HashSet(y);
+            intersection.retainAll(x);
 
-            if (w.contains(y)) {
-                toRemoveW.add(y);
-                toAddW.add(intersection);
-                toAddW.add(difference);
-            } else {
-                if (intersection.size() <= difference.size()) {
+            Set<DfaState> difference = new HashSet(y);
+            difference.removeAll(x);
+
+            if (!intersection.isEmpty() && !difference.isEmpty()) {
+                toRemove.add(y);
+                toAdd.add(intersection);
+                toAdd.add(difference);
+
+                if (w.contains(y)) {
+                    toRemoveW.add(y);
                     toAddW.add(intersection);
-                } else {
                     toAddW.add(difference);
+                } else {
+                    if (intersection.size() <= difference.size()) {
+                        toAddW.add(intersection);
+                    } else {
+                        toAddW.add(difference);
+                    }
                 }
             }
         }

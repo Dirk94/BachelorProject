@@ -15,16 +15,23 @@ import testingstuff.data.DfaState;
 import testingstuff.data.Edge;
 
 public class HopcroftParallel {
-    
-    public Set<Set<DfaState>> run(Dfa dfa) {
-        Set<Set<DfaState>> p = new HashSet();
+
+    public static final int THREADS = 8;
+
+    public List<Set<DfaState>> run(Dfa dfa) {
+        Worker[] workers = new Worker[THREADS];
+        for (int i=0; i<THREADS; i++) {
+            workers[i] = new Worker();
+        }
+
+        List<Set<DfaState>> p = new ArrayList();
         Set<Set<DfaState>> w = new HashSet();
         
         p.add(dfa.getFinalStates());
         p.add(dfa.getNonFinalStates());
         
         w.add(dfa.getFinalStates());
-        
+
         while (!w.isEmpty()) {
             Iterator<Set<DfaState>> wIt = w.iterator();
             Set<DfaState> a = wIt.next();
@@ -32,45 +39,56 @@ public class HopcroftParallel {
             
             for (int i=0; i<dfa.alphabetSize; i++) {
                 Set<DfaState> x = getX(a, i);
-                if (x.isEmpty()) { continue; }
-                
-                List<Thread> threads = new ArrayList();
-                for (Set<DfaState> y : p) {
-                    if (y.size() == 1) { continue; }
-                    
-                    Worker worker = new Worker(x, y, w);
-                    worker.start();
-                    threads.add(worker);
+                if (x.isEmpty()) {
+                    continue;
                 }
-                
-                for (Thread worker : threads) {
+
+                int activeThreads = THREADS;
+                int blockSize;
+
+                if (p.size() < THREADS) {
+                    activeThreads = p.size();
+                    blockSize = 1;
+                } else {
+                    blockSize = (int)(Math.ceil(p.size() / (double)activeThreads));
+                }
+
+                Iterator<Set<DfaState>> pIt = p.iterator();
+
+                for (int j=0; j<activeThreads; j++) {
+                    workers[j] = new Worker();
+                    workers[j].x = x;
+                    workers[j].w = w;
+                    workers[j].p = p;
+                    workers[j].start = j * blockSize;
+                    workers[j].end = (j * blockSize) + blockSize;
+                    workers[j].start();
+                }
+
+                for (int j=0; j<activeThreads; j++) {
                     try {
-                        worker.join();
+                        workers[j].join();
                     } catch(InterruptedException ex) {
                         ex.printStackTrace();
                     }
                 }
-                
-                for (Thread thread : threads) {
-                    Worker worker = (Worker) thread;                    
-                    if (!worker.somethingChanged) { continue; }
-                    
-                    for (Set<DfaState> state : worker.toRemove) {
+
+                for (int j=0; j<activeThreads; j++) {
+                    for (Set<DfaState> state : workers[j].toRemove) {
                         p.remove(state);
                     }
-                    for (Set<DfaState> state : worker.toAdd) {
-                        p.add(state);
-                    }
-                    for (Set<DfaState> state : worker.toRemoveW) {
+
+                    p.addAll(workers[j].toAdd);
+
+                    for (Set<DfaState> state : workers[j].toRemoveW) {
                         w.remove(state);
                     }
-                    for (Set<DfaState> state : worker.toAddW) {
-                        w.add(state);
-                    }
+
+                    w.addAll(workers[j].toAddW);
                 }
             }
         }
-        
+
         return p;
     }
     

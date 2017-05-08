@@ -1,12 +1,11 @@
 package testingstuff;
 
-import java.util.HashMap;
+import java.util.*;
+
 import testingstuff.data.DfaState;
-import java.util.HashSet;
-import java.util.Iterator;
+
 import java.util.Map.Entry;
-import java.util.Random;
-import java.util.Set;
+
 import testingstuff.algorithms.HopcroftSequential;
 import testingstuff.algorithms.TewariSequential;
 import testingstuff.algorithms.hopcroftparallel.HopcroftParallel;
@@ -33,12 +32,6 @@ public class Main {
         HopcroftParallel hcPar = new HopcroftParallel();
         TewariSequential tSeq = new TewariSequential();
         TewariParallel tPar = new TewariParallel();
-       
-        Set<Set<DfaState>> result = hcPar.run(dfas[0]);
-        HashMap<DfaState, Integer> result2 = tSeq.run(dfas[0]);
-        boolean equal = compare(result2, result);
-        System.out.println("Equal: " + equal);
-        System.exit(0);
 
         long start = System.nanoTime();
         System.out.println("Running");
@@ -49,7 +42,7 @@ public class Main {
                     break;
                 
                 case "HopcroftParallel":
-                    hcPar.run(dfas[i]);
+                    List<Set<DfaState>> result1 = hcPar.run(dfas[i]);
                     break;
                     
                 case "TewariSequential":
