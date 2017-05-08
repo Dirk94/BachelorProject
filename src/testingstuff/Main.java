@@ -39,8 +39,7 @@ public class Main {
         boolean equal = compare(result2, result);
         System.out.println("Equal: " + equal);
         System.exit(0);
-        
-        
+
         long start = System.nanoTime();
         System.out.println("Running");
         for (int i=0; i<NUMBER_OF_TESTS; i++) {
