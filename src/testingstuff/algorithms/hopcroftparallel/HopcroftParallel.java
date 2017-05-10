@@ -57,6 +57,7 @@ public class HopcroftParallel {
 
                 for (int j=0; j<activeThreads; j++) {
                     workers[j] = new Worker();
+                    workers[j].setPriority(Thread.MAX_PRIORITY);
                     workers[j].x = x;
                     workers[j].w = w;
                     workers[j].p = p;
@@ -73,17 +74,11 @@ public class HopcroftParallel {
                     }
                 }
 
+                p.clear();
+
                 for (int j=0; j<activeThreads; j++) {
-                    for (Set<DfaState> state : workers[j].toRemove) {
-                        p.remove(state);
-                    }
-
                     p.addAll(workers[j].toAdd);
-
-                    for (Set<DfaState> state : workers[j].toRemoveW) {
-                        w.remove(state);
-                    }
-
+                    w.removeAll(workers[j].toRemoveW);
                     w.addAll(workers[j].toAddW);
                 }
             }

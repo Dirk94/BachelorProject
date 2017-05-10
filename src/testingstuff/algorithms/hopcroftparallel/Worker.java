@@ -11,12 +11,11 @@ public class Worker extends Thread {
 
     public Set<DfaState> x;
     
-    public Set<Set<DfaState>> w, toRemove, toAdd, toRemoveW, toAddW;
+    public Set<Set<DfaState>> w, toAdd, toRemoveW, toAddW;
 
     public List<Set<DfaState>> p;
 
     public Worker() {
-        toRemove = new HashSet();
         toAdd = new HashSet();                
         toRemoveW = new HashSet();
         toAddW = new HashSet();
@@ -25,7 +24,7 @@ public class Worker extends Thread {
     @Override
     public void run() {
         for (int i=start; i<end; i++) {
-            if (i >= p.size()) { continue; }
+            if (i >= p.size()) { return; }
 
             Set<DfaState> y = p.get(i);
             if (y.size() == 1) { continue; }
@@ -37,7 +36,6 @@ public class Worker extends Thread {
             difference.removeAll(x);
 
             if (!intersection.isEmpty() && !difference.isEmpty()) {
-                toRemove.add(y);
                 toAdd.add(intersection);
                 toAdd.add(difference);
 
@@ -52,6 +50,8 @@ public class Worker extends Thread {
                         toAddW.add(difference);
                     }
                 }
+            } else {
+                toAdd.add(y);
             }
         }
     }

@@ -15,10 +15,10 @@ import testingstuff.data.DfaFactory;
 
 public class Main {
 
-    private static final int NUMBER_OF_TESTS = 1;
+    private static final int NUMBER_OF_TESTS = 100;
     
     private static final long DEFAULT_SEED = 65465;
-    
+
     public Main(String algorithm, int states, int alphabetSize) {
         DfaFactory factory = new DfaFactory();
 
@@ -26,8 +26,9 @@ public class Main {
         for (int i=0; i<NUMBER_OF_TESTS; i++) {
         Dfa dfa = factory.randomDfa(states, alphabetSize);
             dfas[i] = dfa;
+            System.out.println("States: " + dfa.states.size());
         }
-        
+
         HopcroftSequential hcSeq = new HopcroftSequential();
         HopcroftParallel hcPar = new HopcroftParallel();
         TewariSequential tSeq = new TewariSequential();
@@ -42,7 +43,9 @@ public class Main {
                     break;
                 
                 case "HopcroftParallel":
-                    List<Set<DfaState>> result1 = hcPar.run(dfas[i]);
+                    List<Set<DfaState>> r1 = hcPar.run(dfas[i]);
+                    HashMap<DfaState, Integer> r2 = tPar.run(dfas[i]);
+                    System.out.println("Result: " + compare(r2, r1));
                     break;
                     
                 case "TewariSequential":
@@ -55,14 +58,14 @@ public class Main {
                     
                 default:
                     printError();
-            }            
+            }
         }
         long end = System.nanoTime();
         long time = (end - start) / 1000000;
         System.out.println("Finished in " + time + "ms");
     }
     
-    public boolean compare(HashMap<DfaState, Integer> result1, Set<Set<DfaState>> result2) {
+    public boolean compare(HashMap<DfaState, Integer> result1, List<Set<DfaState>> result2) {
         for (Set<DfaState> stateSet : result2) {            
             int expectedLabel = -1;
             for (DfaState state : stateSet) {
