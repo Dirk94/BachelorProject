@@ -6,13 +6,17 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import testingstuff.data.Dfa;
 import testingstuff.data.DfaState;
 import testingstuff.data.Edge;
 
 public class TewariParallel {   
-    
+
+    public static int THREADS = 1;
     
     public HashMap<DfaState, Integer> run(final Dfa dfa) {
         final HashMap<DfaState, Integer> blockNo = new HashMap();               
@@ -32,6 +36,7 @@ public class TewariParallel {
         if (dfa.states.size() == 1) {
             return blockNo;
         }
+
         Thread[] threads = new Thread[nLogN];
         
         int numberOfBlocks = 2;
@@ -41,6 +46,7 @@ public class TewariParallel {
                 final HashMap<DfaState, Integer>[] threadLabels = new HashMap[nLogN+1];
                 
                 final AtomicInteger maxBValue = new AtomicInteger(0);
+                ExecutorService pool = Executors.newFixedThreadPool(TewariParallel.THREADS);
                 for (int j = 1; j <= nLogN; j++) {
                     final int jFinal = j;
                     threadLabels[jFinal] = new HashMap();
@@ -85,15 +91,21 @@ public class TewariParallel {
                             }
                         }
                     };
-                    threads[j-1].start();
+                    pool.execute(threads[j-1]);
                 }
-                
-                waitForThreads(threads);
+
+                pool.shutdown();
+                try {
+                    pool.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+                } catch(InterruptedException e) {
+                    e.printStackTrace();
+                }
                                
                 final int k = (int)Math.ceil(((double)maxBValue.get() * (n + 1.0) + (double)maxBValue.get()) / n);
                 
                 final ConcurrentHashMap<Integer, Boolean> PRESENT = new ConcurrentHashMap();
-                
+
+                pool = Executors.newFixedThreadPool(TewariParallel.THREADS);
                 for (int j = 1; j <= nLogN; j++) {
                     final int finalJ = j;
                     threads[j - 1] = new Thread() {
@@ -110,11 +122,16 @@ public class TewariParallel {
                             }
                         }
                     };
-                    threads[j-1].start();
+                    pool.execute(threads[j-1]);
                 }
-                
-                waitForThreads(threads);
-                                
+                pool.shutdown();
+                try {
+                    pool.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+                } catch(InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+                pool = Executors.newFixedThreadPool(TewariParallel.THREADS);
                 final int ai[] = new int[nLogN+1];
                 for (int j=1; j<=nLogN; j++) {
                     final int finalJ = j;
@@ -134,12 +151,18 @@ public class TewariParallel {
                             }
                         }
                     };
-                    threads[j-1].start();
+                    pool.execute(threads[j-1]);
                 }
-                
-                waitForThreads(threads);
+
+                pool.shutdown();
+                try {
+                    pool.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+                } catch(InterruptedException e) {
+                    e.printStackTrace();
+                }
                                
                 // Compute partial sums..
+                pool = Executors.newFixedThreadPool(TewariParallel.THREADS);
                 final int[] si = new int[nLogN + 1];
                 for (int j = 1; j <= nLogN; j++) {
                     final int finalJ = j;
@@ -152,14 +175,20 @@ public class TewariParallel {
                             }
                         }
                     };
-                    threads[j - 1].start();
+                    pool.execute(threads[j - 1]);
                 }
-                
-                waitForThreads(threads);
+
+                pool.shutdown();
+                try {
+                    pool.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+                } catch(InterruptedException e) {
+                    e.printStackTrace();
+                }
                                 
                 // Compute new block numbers
                 final ConcurrentHashMap<Integer, Integer> newBlockNo = new ConcurrentHashMap();
-                
+
+                pool = Executors.newFixedThreadPool(TewariParallel.THREADS);
                 for (int j = 1; j <= nLogN; j++) {
                     final int finalJ = j;
                     threads[j - 1] = new Thread() {
@@ -181,11 +210,17 @@ public class TewariParallel {
                             }
                         }
                     };
-                    threads[j-1].start();
+                    pool.execute(threads[j-1]);
                 }
-                
-                waitForThreads(threads);
-                                
+
+                pool.shutdown();
+                try {
+                    pool.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+                } catch(InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+                pool = Executors.newFixedThreadPool(TewariParallel.THREADS);
                 // Update the blockNo according to newBlockNo.
                 for (int j=1; j<=nLogN; j++) {
                     final int finalJ = j;
@@ -204,11 +239,16 @@ public class TewariParallel {
                             }
                         }
                     };
-                    threads[j-1].start();
+                    pool.execute(threads[j-1]);
                 }
                 
                 // Wait for all threads.
-                waitForThreads(threads);
+                pool.shutdown();
+                try {
+                    pool.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+                } catch(InterruptedException e) {
+                    e.printStackTrace();
+                }
                 
             }
             

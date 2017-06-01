@@ -16,7 +16,7 @@ import testingstuff.data.Edge;
 
 public class HopcroftParallel {
 
-    public static final int THREADS = 8;
+    public static int THREADS = 1;
 
     public List<Set<DfaState>> run(Dfa dfa) {
         Worker[] workers = new Worker[THREADS];
@@ -52,8 +52,6 @@ public class HopcroftParallel {
                 } else {
                     blockSize = (int)(Math.ceil(p.size() / (double)activeThreads));
                 }
-
-                Iterator<Set<DfaState>> pIt = p.iterator();
 
                 for (int j=0; j<activeThreads; j++) {
                     workers[j] = new Worker();
