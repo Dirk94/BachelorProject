@@ -1,16 +1,16 @@
 package testingstuff.algorithms;
 
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Set;
+import java.util.*;
+
 import testingstuff.data.Dfa;
 import testingstuff.data.DfaState;
 import testingstuff.data.Edge;
 
 public class HopcroftSequential {
 
-    public Set<Set<DfaState>> run(Dfa dfa) {
-        Set<Set<DfaState>> p = new HashSet();
+    public List<Set<DfaState>> run(Dfa dfa) {
+        Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
+        List<Set<DfaState>> p = new ArrayList();
         Set<Set<DfaState>> w = new HashSet();
 
         p.add(dfa.getFinalStates());

@@ -30,7 +30,6 @@ public class Main {
         TewariSequential tSeq = new TewariSequential();
         TewariParallel tPar = new TewariParallel();
 
-
         System.out.println("states: " + states + ", alphabet: " + alphabetSize + ", threads: " + nThreads);
         System.out.println("Starting " + NUMBER_OF_TESTS + " tests.");
         long totalTime = 0;
